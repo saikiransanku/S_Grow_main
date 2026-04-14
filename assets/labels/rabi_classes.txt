@@ -1,0 +1,7 @@
+early_blight_potato
+healthy_potato
+late_blight_potato
+onion_healthy
+onion_iris_yellow_virus
+onion_purple_blotch
+onion_stemphylium_leaf_blightonion_stemphylium_leaf_blight

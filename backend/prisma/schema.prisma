@@ -1,0 +1,66 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    email        String         @unique
+    password     String
+    firstName    String
+    lastName     String
+    phone        String?
+    address      String?
+    city         String?
+    state        String?
+    pincode      String?
+    profile      Profile?
+    usageHistory UsageHistory[]
+    createdAt    DateTime       @default(now())
+    updatedAt    DateTime       @updatedAt
+
+    @@map("users")
+}
+
+model Profile {
+    id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    userId    String   @unique @db.Uuid
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    farmSize  Float?
+    cropType  String?
+    bio       String?
+    avatar    String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("profiles")
+}
+
+model FarmerLaw {
+    id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    title       String
+    description String   @db.Text
+    category    String
+    content     String   @db.Text
+    source      String?
+    link        String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@map("farmer_laws")
+}
+
+model UsageHistory {
+    id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    userId    String   @db.Uuid
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    action    String
+    data      String?
+    createdAt DateTime @default(now())
+
+    @@map("usage_history")
+}
