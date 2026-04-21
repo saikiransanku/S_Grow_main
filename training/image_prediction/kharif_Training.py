@@ -1,4 +1,7 @@
-from ssgrow_transfer_training import main
+try:
+    from training.image_prediction.train_kharif import main
+except ImportError:  # pragma: no cover
+    from train_kharif import main
 
 
 if __name__ == "__main__":

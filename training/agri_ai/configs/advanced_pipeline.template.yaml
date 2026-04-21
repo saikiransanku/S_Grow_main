@@ -1,0 +1,116 @@
+experiment:
+  name: agri_ai_170_class_template
+  seed: 42
+  output_root: training/agri_ai_artifacts/runs/agri_ai_170_class_template
+
+data:
+  unlabeled_root: data/datasets/unlabeled_plants
+  labeled_root: data/datasets/image_prediction_seasonal_dataset
+  active_learning_root: data/datasets/active_learning_crops
+  num_classes: 170
+  image_size: 224
+  topk_target: 3
+
+phase_0_foundation:
+  self_supervised:
+    enabled: true
+    method: dino
+    backbone: vit_base_patch16
+    epochs: 100
+  augmentation_policy_rl:
+    enabled: true
+    agent: ppo
+    reward_metric: val_top3_accuracy
+  curriculum_learning:
+    enabled: true
+    scorer: rl_difficulty_ranker
+    schedule: easy_to_hard
+
+phase_1_feature_extraction:
+  preprocessing:
+    module: training.agri_ai.feature_extraction.preprocessing
+    preserve_lesions: true
+  segmentation:
+    primary: unet
+    fallback: hsv_threshold
+  backbones:
+    - vgg16
+    - vgg19
+    - convnext_tiny
+    - vit_dino
+
+phase_2_feature_fusion:
+  adaptive_fusion:
+    enabled: true
+    mode: concat_with_learnable_weights
+  handcrafted_features:
+    enabled: true
+    include:
+      - hsv_histogram
+      - glcm
+      - lbp
+      - shape_descriptors
+  cross_attention:
+    enabled: true
+    layers: 2
+
+phase_3_embedding_learning:
+  metric_learning:
+    enabled: true
+    losses:
+      - triplet
+      - supcon
+    hard_negative_mining: true
+  dimensionality_reduction:
+    enabled: true
+    method: pca
+    variance_retained: 0.95
+    fit_on_train_only: true
+  hard_example_mining:
+    enabled: true
+    strategy: rl_prioritized_replay
+
+phase_4_classification:
+  xgboost:
+    enabled: true
+  multitask_nn:
+    enabled: true
+    tasks:
+      - plant_type
+      - disease_type
+      - severity
+  prototypical_network:
+    enabled: true
+  ensemble:
+    enabled: true
+    tuner: rl_weight_search
+
+phase_5_feedback:
+  rlhf:
+    enabled: true
+    source: expert_corrections
+  active_learning:
+    enabled: true
+    trigger: low_confidence
+  reward_shaping:
+    enabled: true
+    include:
+      - calibration
+      - biological_plausibility
+
+phase_6_evaluation:
+  metrics:
+    - accuracy
+    - macro_f1
+    - top3_accuracy
+    - confusion_matrix
+  calibration:
+    enabled: true
+    method: temperature_scaling
+    report_ece: true
+  explainability:
+    enabled: true
+    include:
+      - gradcam
+      - dino_attention_maps
+

@@ -1,4 +1,7 @@
-from ssgrow_transfer_training import main
+try:
+    from training.image_prediction.train_all_season import main
+except ImportError:  # pragma: no cover
+    from train_all_season import main
 
 
 if __name__ == "__main__":

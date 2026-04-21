@@ -1,15 +1,18 @@
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .pytest_cache/
 
 # Virtual environments
 venv/
 .venv/
+**/venv/
 
 # Node
 node_modules/
 .next/
+*.tsbuildinfo
 
 # Env files
 .env
@@ -28,3 +31,4 @@ data/
 
 # Training outputs
 training/**/runs/
+*.tmp.h5
