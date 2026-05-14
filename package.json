@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "boto3": "^0.0.1",
-    "botocore": "^0.0.1",
-    "tqdm": "^2.0.3"
-  }
-}

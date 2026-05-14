@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-import { apiClient } from "@/lib/api";
+import {
+  buildAdvisorProfileContext,
+  buildProfileName,
+  fetchCurrentUserProfile,
+} from "@/lib/currentUser";
 import { useAuth } from "@/lib/useAuth";
 
 const AI_HISTORY_TOGGLE_EVENT = "ssgrow-ai-history-toggle";
@@ -64,6 +68,7 @@ interface Chat {
   updatedAt: string;
   messages: Message[];
   lastPredictionContext: any | null;
+  advisorContext: any | null;
 }
 
 const SUMMARY_CARD_LABEL = "Crop Disease Diagnosis";
@@ -243,7 +248,20 @@ const buildEmptyChat = (title = "New Chat"): Chat => ({
   updatedAt: createTimestamp(),
   messages: [],
   lastPredictionContext: null,
+  advisorContext: null,
 });
+
+const buildConversationHistory = (chat: Chat | null) => {
+  if (!chat) return [];
+
+  return chat.messages
+    .slice(-8)
+    .filter((message) => Boolean(message.content?.trim()))
+    .map((message) => ({
+      role: message.type === "user" ? "user" : "assistant",
+      content: message.content.trim().slice(0, 4000),
+    }));
+};
 
 const getDiseasePlaybook = (diseaseName: string) => {
   const token = diseaseName.toLowerCase().replace(/\s+/g, "_");
@@ -828,7 +846,7 @@ function EmptyChatState() {
     <div className="mx-auto flex h-full w-full max-w-[900px] items-center justify-center px-4">
       <div className="text-center">
         <p className="text-sm font-medium tracking-[0.24em] text-emerald-600 dark:text-emerald-300">
-          SUPALAAI
+          DISEASE AI
         </p>
         <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-neutral-900 dark:text-neutral-100 md:text-5xl">
           How can{" "}
@@ -838,7 +856,7 @@ function EmptyChatState() {
           help you today?
         </h1>
         <p className="mt-4 text-sm leading-7 text-neutral-500 dark:text-neutral-400 md:text-base">
-          Upload a leaf image or ask a follow-up question to continue in the same chat.
+          Upload a diseased leaf image for analysis, or ask follow-up questions about the result.
         </p>
       </div>
     </div>
@@ -1068,6 +1086,7 @@ export default function AIGrow() {
   const [streamingContent, setStreamingContent] = useState("");
   const [streamingChatId, setStreamingChatId] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("");
+  const [profileContext, setProfileContext] = useState<any | null>(null);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<SeasonOption>("auto");
@@ -1153,6 +1172,14 @@ export default function AIGrow() {
     }));
   };
 
+  const setAdvisorContext = (chatId: string, context: any) => {
+    updateChat(chatId, (chat) => ({
+      ...chat,
+      updatedAt: createTimestamp(),
+      advisorContext: context,
+    }));
+  };
+
   const selectChat = (chatId: string) => {
     setCurrentChatId(chatId);
     setMobileSidebarOpen(false);
@@ -1200,20 +1227,18 @@ export default function AIGrow() {
   }, [messages, streamingContent, currentChatId]);
 
   useEffect(() => {
-    const loadProfileName = async () => {
+    const loadProfileDetails = async () => {
       try {
-        const response = await apiClient.get("/users");
-        const user = Array.isArray(response.data) ? response.data[0] : null;
-        if (!user) return;
-        const fullName =
-          `${user.firstName || ""} ${user.lastName || ""}`.trim();
-        setProfileName(fullName || user.firstName || user.email || "");
+        const user = await fetchCurrentUserProfile();
+        setProfileName(buildProfileName(user));
+        setProfileContext(buildAdvisorProfileContext(user));
       } catch {
         setProfileName("");
+        setProfileContext(null);
       }
     };
 
-    loadProfileName();
+    loadProfileDetails();
   }, []);
 
   useEffect(() => {
@@ -1775,10 +1800,20 @@ export default function AIGrow() {
     setIsAnalyzing(true);
 
     try {
-      const context =
+      const predictionContext =
         chats.find((chat) => chat.id === chatId)?.lastPredictionContext ||
         (chatId === currentChatId ? currentChat?.lastPredictionContext : null) ||
         null;
+      const currentAdvisorContext =
+        chats.find((chat) => chat.id === chatId)?.advisorContext ||
+        (chatId === currentChatId ? currentChat?.advisorContext : null) ||
+        null;
+      const history =
+        buildConversationHistory(
+          chats.find((chat) => chat.id === chatId) ||
+            (chatId === currentChatId ? currentChat : null) ||
+            null,
+        ) || [];
 
       const data = await fetchJson(
         `${AI_API_BASE}/chat`,
@@ -1789,14 +1824,20 @@ export default function AIGrow() {
           },
           body: JSON.stringify({
             message: prompt,
-            context,
+            context: predictionContext,
             profile_name: profileName,
+            profile_context: profileContext,
+            advisor_context: currentAdvisorContext,
+            conversation_history: history,
           }),
         },
         90000,
       );
 
       const reply = data?.reply || "Unable to generate a response right now.";
+      if (Object.prototype.hasOwnProperty.call(data || {}, "advisor_context")) {
+        setAdvisorContext(chatId, data?.advisor_context ?? null);
+      }
       const thinkingTime = formatThinkingTime(startedAt);
       streamResponse(
         isGreetingPrompt ? reply : prependThinkingTime(thinkingTime, reply),

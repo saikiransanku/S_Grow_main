@@ -51,7 +51,13 @@ export default function Home() {
                 href="/ai-grow"
                 className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-lg font-semibold shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all duration-300"
               >
-                Get Started Free
+                Open Disease AI
+              </a>
+              <a
+                href="/suggestion-ai"
+                className="bg-white/12 backdrop-blur-md border-2 border-sky-300/50 text-white px-8 py-4 rounded-lg font-semibold shadow-2xl hover:bg-sky-400/20 hover:scale-105 transition-all duration-300"
+              >
+                Open Suggestion AI
               </a>
               <button className="backdrop-blur-md bg-white/10 hover:bg-white/20 border-2 border-white/30 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 hover:scale-105">
                 Watch Demo

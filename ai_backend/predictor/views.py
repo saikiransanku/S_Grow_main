@@ -329,6 +329,9 @@ def chat(request: HttpRequest):
     message = (body.get("message") or "").strip()
     context = body.get("context") or {}
     profile_name = (body.get("profile_name") or "").strip()
+    profile_context = body.get("profile_context") or {}
+    advisor_context = body.get("advisor_context") or {}
+    conversation_history = body.get("conversation_history") or []
     if not message:
         return JsonResponse({"error": "Missing message"}, status=400)
 
@@ -338,6 +341,9 @@ def chat(request: HttpRequest):
             prompt=message,
             context=context,
             profile_name=profile_name,
+            profile_context=profile_context,
+            advisor_context=advisor_context,
+            conversation_history=conversation_history,
         )
     except RuntimeError as exc:
         logger.exception("Chat services could not be initialized.")
@@ -349,6 +355,12 @@ def chat(request: HttpRequest):
     reply = llm.get("answer") if isinstance(llm, dict) else ""
     if not isinstance(reply, str) or not reply.strip():
         reply = "Unable to generate response right now."
-    return JsonResponse({"status": "success", "reply": reply})
+    response_payload = {"status": "success", "reply": reply}
+    if isinstance(llm, dict):
+        if "advisor_context" in llm:
+            response_payload["advisor_context"] = llm.get("advisor_context")
+        if "route" in llm:
+            response_payload["route"] = llm.get("route")
+    return JsonResponse(response_payload)
 
 # Create your views here.

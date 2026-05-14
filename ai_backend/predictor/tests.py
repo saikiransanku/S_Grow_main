@@ -14,6 +14,7 @@ from PIL import Image
 
 from . import services, views
 from .models import UploadedLeafImage
+from .service_modules.agriculture_advisor import CROP_RECOMMENDATION_ENGINE
 
 
 class CallLLMTests(SimpleTestCase):
@@ -114,7 +115,7 @@ class CallLLMTests(SimpleTestCase):
         self.assertIn("cloud AI quota is currently reached", answer)
 
     @patch("predictor.services._get_openai_api_key", return_value="")
-    def test_call_llm_without_prediction_context_requests_image_in_required_format(
+    def test_call_llm_without_prediction_context_asks_for_clarification(
         self,
         _mock_api_key,
     ) -> None:
@@ -125,10 +126,10 @@ class CallLLMTests(SimpleTestCase):
         )
 
         answer = response["answer"]
-        self.assertIn("Crop Identified:\nNot available", answer)
-        self.assertIn("Disease Prediction:\nAwaiting clear crop leaf image", answer)
-        self.assertIn("Prediction Confidence:\nNot available", answer)
-        self.assertIn("* Upload one clear leaf image in good light.", answer)
+        self.assertEqual(
+            answer,
+            "Do you want crop recommendation, farm planning, or plant disease prediction?",
+        )
 
     def test_call_llm_returns_welcome_message_for_greeting_even_with_context(self) -> None:
         response = services.call_llm(
@@ -143,6 +144,83 @@ class CallLLMTests(SimpleTestCase):
         self.assertIn("I'm your AI crop assistant.", answer)
         self.assertIn("upload a leaf image anytime", answer.lower())
         self.assertNotIn("Crop Identified:", answer)
+
+    @patch("predictor.services._get_openai_api_key", return_value="")
+    def test_call_llm_asks_same_land_before_crop_recommendation_when_profile_exists(
+        self,
+        _mock_api_key,
+    ) -> None:
+        response = services.call_llm(
+            prompt="Recommend a crop for my farm",
+            context=None,
+            profile_name="Kiran",
+            profile_context={
+                "district": "Warangal",
+                "mandal_village": "Parvathagiri",
+                "soil_type": "Red soil",
+                "water_source": "Rainfed",
+                "irrigation_level": "Low",
+                "season": "Kharif",
+                "crop_purpose": "Cash crop",
+                "land_size": 3.0,
+            },
+        )
+
+        self.assertIn("same land details saved in your profile", response["answer"])
+        self.assertEqual(response["route"], CROP_RECOMMENDATION_ENGINE)
+        self.assertEqual(
+            response["advisor_context"]["pending_confirmation"],
+            "same_land",
+        )
+
+    @patch("predictor.services._get_openai_api_key", return_value="")
+    def test_call_llm_returns_telangana_crop_recommendations_after_same_land_confirmation(
+        self,
+        _mock_api_key,
+    ) -> None:
+        response = services.call_llm(
+            prompt="yes same land",
+            context=None,
+            profile_name="Kiran",
+            profile_context={
+                "district": "Warangal",
+                "mandal_village": "Parvathagiri",
+                "soil_type": "Red soil",
+                "water_source": "Rainfed",
+                "irrigation_level": "Low",
+                "season": "Kharif",
+                "crop_purpose": "Cash crop",
+                "land_size": 3.0,
+                "previous_crop": "Cotton",
+                "cropping_preference": "Intercropping",
+            },
+            advisor_context={
+                "active_module": CROP_RECOMMENDATION_ENGINE,
+                "pending_confirmation": "same_land",
+            },
+        )
+
+        answer = response["answer"]
+        self.assertIn("1. User Summary", answer)
+        self.assertIn("2. Recommendation Rank", answer)
+        self.assertIn("3. Multi-cropping / Intercropping Options", answer)
+        self.assertIn("4. Final Advice", answer)
+        self.assertTrue(
+            any(crop_name in answer for crop_name in ["Groundnut", "Red gram", "Cotton"])
+        )
+
+    @patch("predictor.services._get_openai_api_key", return_value="")
+    def test_call_llm_routes_disease_keywords_to_disease_predictor_when_no_image_context(
+        self,
+        _mock_api_key,
+    ) -> None:
+        response = services.call_llm(
+            prompt="My leaves have yellow spots and fungus. What disease is this?",
+            context=None,
+            profile_name="Kiran",
+        )
+
+        self.assertIn("Plant Disease Predictor", response["answer"])
 
 
 class SeasonNormalizationTests(SimpleTestCase):

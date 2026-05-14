@@ -32,6 +32,14 @@ from .service_modules import (
     resolve_agronomy_docs_dir,
     score_reference_snippet,
 )
+from .service_modules.agriculture_advisor import (
+    CROP_RECOMMENDATION_ENGINE,
+    FARM_PLANNING_ADVISOR,
+    GENERAL_AGRICULTURE_QA,
+    PLANT_DISEASE_PREDICTOR,
+    build_agriculture_advisor_response,
+    classify_agriculture_request,
+)
 
 try:
     import torch
@@ -3861,18 +3869,63 @@ def _fallback_assistant_reply(
     )
 
 
-def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = "") -> Dict[str, str]:
+def call_llm(
+    prompt: str,
+    context: Optional[dict] = None,
+    profile_name: str = "",
+    profile_context: Optional[dict] = None,
+    advisor_context: Optional[dict] = None,
+    conversation_history: Optional[List[dict]] = None,
+) -> Dict[str, Any]:
     if _is_greeting(prompt):
         return {"answer": _build_greeting(profile_name)}
-
-    api_key = _get_openai_api_key()
-    if not api_key:
-        return {"answer": _fallback_assistant_reply(prompt, context, profile_name)}
 
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     primary_ctx = _select_primary_prediction_row(context)
     prediction_context = _build_llm_prediction_context(context)
     has_prediction = _has_prediction_context(primary_ctx)
+    route = classify_agriculture_request(prompt, has_prediction_context=has_prediction)
+    advisor_reply = build_agriculture_advisor_response(
+        prompt=prompt,
+        profile_name=profile_name,
+        profile_context=profile_context,
+        advisor_context=advisor_context,
+        conversation_history=conversation_history,
+        has_prediction_context=has_prediction,
+    )
+
+    if route in {CROP_RECOMMENDATION_ENGINE, FARM_PLANNING_ADVISOR, GENERAL_AGRICULTURE_QA}:
+        return {
+            "answer": str(advisor_reply.get("answer") or "Unable to generate a response right now."),
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
+        }
+
+    if route != PLANT_DISEASE_PREDICTOR and str(advisor_reply.get("answer") or "").strip():
+        return {
+            "answer": str(advisor_reply.get("answer") or "Unable to generate a response right now."),
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": str(advisor_reply.get("route") or route),
+        }
+
+    if route == PLANT_DISEASE_PREDICTOR and not has_prediction:
+        return {
+            "answer": (
+                "This looks like a plant disease or pest question. "
+                "Please use the Plant Disease Predictor and upload a clear leaf image."
+            ),
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
+        }
+
+    api_key = _get_openai_api_key()
+    if not api_key:
+        return {
+            "answer": _fallback_assistant_reply(prompt, context, profile_name),
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
+        }
+
     diagnosis_status = str(primary_ctx.get("diagnosis_status") or "").strip().lower()
     confidence_value = _extract_prediction_confidence_value(primary_ctx)
     symptom_hint = _build_symptoms_detected(
@@ -3911,8 +3964,16 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
             temperature=0.3,
         )
         if text and _is_structured_ssgrow_response(text):
-            return {"answer": text}
-        return {"answer": _fallback_assistant_reply(prompt, context, profile_name)}
+            return {
+                "answer": text,
+                "advisor_context": advisor_reply.get("advisor_context"),
+                "route": route,
+            }
+        return {
+            "answer": _fallback_assistant_reply(prompt, context, profile_name),
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
+        }
     except HTTPError as exc:
         error_detail = _extract_http_error_detail(exc)
         if exc.code == 429:
@@ -3930,11 +3991,22 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                         )
                     ),
                 )
+                ,
+                "advisor_context": advisor_reply.get("advisor_context"),
+                "route": route,
             }
         if exc.code in {401, 403}:
             if error_detail:
-                return {"answer": f"LLM API authentication failed: {error_detail}"}
-            return {"answer": "LLM API authentication failed. Check OPENAI_API_KEY and model access."}
+                return {
+                    "answer": f"LLM API authentication failed: {error_detail}",
+                    "advisor_context": advisor_reply.get("advisor_context"),
+                    "route": route,
+                }
+            return {
+                "answer": "LLM API authentication failed. Check OPENAI_API_KEY and model access.",
+                "advisor_context": advisor_reply.get("advisor_context"),
+                "route": route,
+            }
         if error_detail:
             return {
                 "answer": _fallback_assistant_reply(
@@ -3945,6 +4017,9 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                         f"This answer uses the CNN prediction because the cloud AI returned error {exc.code}: {error_detail}"
                     ),
                 )
+                ,
+                "advisor_context": advisor_reply.get("advisor_context"),
+                "route": route,
             }
         return {
             "answer": _fallback_assistant_reply(
@@ -3955,6 +4030,9 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                     f"This answer uses the CNN prediction because the cloud AI returned error {exc.code}."
                 ),
             )
+            ,
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
         }
     except (URLError, SocketTimeout, TimeoutError):
         return {
@@ -3966,6 +4044,9 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                     "This answer uses the CNN prediction because the cloud AI service is not reachable right now."
                 ),
             )
+            ,
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
         }
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return {
@@ -3977,6 +4058,9 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                     "This answer uses the CNN prediction because the cloud AI response could not be processed."
                 ),
             )
+            ,
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
         }
     except Exception:
         return {
@@ -3988,5 +4072,8 @@ def call_llm(prompt: str, context: Optional[dict] = None, profile_name: str = ""
                     "This answer uses the CNN prediction because the cloud AI assistant is temporarily unavailable."
                 ),
             )
+            ,
+            "advisor_context": advisor_reply.get("advisor_context"),
+            "route": route,
         }
     

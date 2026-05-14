@@ -5,6 +5,7 @@ import csv
 import json
 import os
 import random
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, Optional
@@ -219,12 +220,18 @@ def build_training_config(args: argparse.Namespace) -> TrainingConfig:
 
 def run_multitask_training(args: argparse.Namespace) -> Path:
     try:
-        from training.image_prediction.plant_multitask_training import (
+        from training.agri_ai.orchestration.seasonal_multitask import (
             TF_TO_MULTITASK_BACKBONE,
             run_multitask_training_for_season,
         )
     except ImportError:  # pragma: no cover
-        from plant_multitask_training import TF_TO_MULTITASK_BACKBONE, run_multitask_training_for_season
+        repo_root = Path(__file__).resolve().parents[2]
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+        from training.agri_ai.orchestration.seasonal_multitask import (
+            TF_TO_MULTITASK_BACKBONE,
+            run_multitask_training_for_season,
+        )
 
     season = normalize_season_name(args.season)
     output_dir = resolve_output_dir(season, args.output_dir)

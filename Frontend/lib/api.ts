@@ -34,7 +34,9 @@ export const api = {
   },
   users: {
     getAll: () => apiClient.get("/users"),
+    getMe: () => apiClient.get("/users/me"),
     getById: (id: string) => apiClient.get(`/users/${id}`),
+    updateMe: (data: any) => apiClient.put("/users/me", data),
     update: (id: string, data: any) => apiClient.put(`/users/${id}`, data),
   },
   laws: {

@@ -11,7 +11,9 @@ export function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const isAIPage = pathname.startsWith("/ai-grow");
+  const isDiseaseAIPage = pathname.startsWith("/ai-grow");
+  const isSuggestionAIPage = pathname.startsWith("/suggestion-ai");
+  const isAIPage = isDiseaseAIPage || isSuggestionAIPage;
 
   useEffect(() => {
     // Check if user is authenticated
@@ -72,18 +74,47 @@ export function Navbar() {
     return (
       <nav className="sticky top-0 z-50 border-b border-black/6 bg-[#f4f6f4]/92 py-2 backdrop-blur-xl dark:border-white/8 dark:bg-[#101010]/95">
         <div className="mx-auto flex h-16 w-full items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event(AI_HISTORY_TOGGLE_EVENT))}
-            aria-label="Open chat history"
-            className="flex items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
-          >
-            <img
-              src="/logo.png"
-              alt="SSGrow logo"
-              className="h-auto w-28 object-contain sm:w-32 md:w-36"
-            />
-          </button>
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event(AI_HISTORY_TOGGLE_EVENT))}
+              aria-label="Open chat history"
+              className="flex items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+            >
+              <img
+                src="/logo.png"
+                alt="SSGrow logo"
+                className="h-auto w-28 object-contain sm:w-32 md:w-36"
+              />
+            </button>
+
+            <div className="rounded-full border border-black/8 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-neutral-200 md:hidden">
+              {isDiseaseAIPage ? "Disease AI" : "Suggestion AI"}
+            </div>
+          </div>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <Link
+              href="/ai-grow"
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                isDiseaseAIPage
+                  ? "bg-emerald-100 text-emerald-950 dark:bg-emerald-400/15 dark:text-emerald-200"
+                  : "text-neutral-600 hover:bg-black/[0.04] hover:text-neutral-950 dark:text-neutral-300 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              }`}
+            >
+              Disease AI
+            </Link>
+            <Link
+              href="/suggestion-ai"
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                isSuggestionAIPage
+                  ? "bg-sky-100 text-sky-950 dark:bg-sky-400/15 dark:text-sky-200"
+                  : "text-neutral-600 hover:bg-black/[0.04] hover:text-neutral-950 dark:text-neutral-300 dark:hover:bg-white/[0.05] dark:hover:text-white"
+              }`}
+            >
+              Suggestion AI
+            </Link>
+          </div>
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
@@ -133,17 +164,47 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Desktop AI Grow Button - Hidden on mobile */}
-          <Link href="/ai-grow" className="hidden md:block">
-            <div className="border border-emerald-200 dark:border-emerald-700 rounded-full p-2 flex justify-between items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors duration-200 cursor-pointer">
-              <span>
-                <img className="w-8" src="/ai-logo.png" alt="ai-grow" />
-              </span>
-              <button className="text-emerald-700 dark:text-emerald-400 font-medium hover:text-emerald-900 dark:hover:text-emerald-300 transition-colors duration-200 whitespace-nowrap">
-                SupalaAI
-              </button>
-            </div>
-          </Link>
+          {/* Desktop AI Buttons - Hidden on mobile */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/ai-grow">
+              <div className="border border-emerald-200 dark:border-emerald-700 rounded-full p-2 flex justify-between items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors duration-200 cursor-pointer">
+                <span>
+                  <img className="w-8" src="/ai-logo.png" alt="ai-grow" />
+                </span>
+                <button className="text-emerald-700 dark:text-emerald-400 font-medium hover:text-emerald-900 dark:hover:text-emerald-300 transition-colors duration-200 whitespace-nowrap">
+                  Disease AI
+                </button>
+              </div>
+            </Link>
+
+            <Link href="/suggestion-ai">
+              <div className="border border-sky-200 dark:border-sky-700 rounded-full p-2 flex justify-between items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors duration-200 cursor-pointer">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7 20h10M6 4h12a1 1 0 0 1 1 1v10.5a1 1 0 0 1-.4.8l-4.8 3.6a1 1 0 0 1-1.2 0l-4.8-3.6a1 1 0 0 1-.4-.8V5a1 1 0 0 1 1-1Z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 9h6M9 12h6"
+                    />
+                  </svg>
+                </span>
+                <button className="text-sky-700 dark:text-sky-400 font-medium hover:text-sky-900 dark:hover:text-sky-300 transition-colors duration-200 whitespace-nowrap">
+                  Suggestion AI
+                </button>
+              </div>
+            </Link>
+          </div>
 
           {/* Desktop Right Menu - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-3">
@@ -254,12 +315,40 @@ export function Navbar() {
               </svg>
             </div>
 
-            {/* Mobile AI Grow Link */}
+            {/* Mobile AI Links */}
             <Link href="/ai-grow" onClick={closeMobileMenu}>
               <div className="mt-3 p-3 border border-emerald-200 dark:border-emerald-700 rounded-lg flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors">
                 <img className="w-6 h-6" src="/ai-logo.png" alt="ai-grow" />
                 <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                  SupalaAI
+                  Disease AI
+                </span>
+              </div>
+            </Link>
+
+            <Link href="/suggestion-ai" onClick={closeMobileMenu}>
+              <div className="mt-3 p-3 border border-sky-200 dark:border-sky-700 rounded-lg flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7 20h10M6 4h12a1 1 0 0 1 1 1v10.5a1 1 0 0 1-.4.8l-4.8 3.6a1 1 0 0 1-1.2 0l-4.8-3.6a1 1 0 0 1-.4-.8V5a1 1 0 0 1 1-1Z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 9h6M9 12h6"
+                    />
+                  </svg>
+                </span>
+                <span className="text-sky-700 dark:text-sky-400 font-medium">
+                  Suggestion AI
                 </span>
               </div>
             </Link>
