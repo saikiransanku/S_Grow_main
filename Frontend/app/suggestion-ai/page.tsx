@@ -8,6 +8,7 @@ import {
   buildProfileName,
   fetchCurrentUserProfile,
 } from "@/lib/currentUser";
+import { consumePendingSuphalaIntent } from "@/lib/suphalaAI";
 import { useAuth } from "@/lib/useAuth";
 
 const AI_HISTORY_TOGGLE_EVENT = "ssgrow-ai-history-toggle";
@@ -364,11 +365,13 @@ export default function SuggestionAIPage() {
   const [isSending, setIsSending] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileContext, setProfileContext] = useState<any | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingLauncherIntentHandledRef = useRef(false);
 
   const currentChat =
     chats.find((chat) => chat.id === currentChatId) || null;
@@ -456,6 +459,8 @@ export default function SuggestionAIPage() {
       } catch {
         setProfileName("");
         setProfileContext(null);
+      } finally {
+        setProfileLoaded(true);
       }
     };
 
@@ -540,6 +545,17 @@ export default function SuggestionAIPage() {
       setIsSending(false);
     }
   };
+
+  useEffect(() => {
+    if (pendingLauncherIntentHandledRef.current) return;
+    if (isLoading || !isAuthenticated || isSending || !profileLoaded) return;
+
+    pendingLauncherIntentHandledRef.current = true;
+    const pendingIntent = consumePendingSuphalaIntent("suggestion");
+    if (!pendingIntent?.prompt?.trim()) return;
+
+    void submitPrompt(pendingIntent.prompt);
+  }, [isAuthenticated, isLoading, isSending, profileLoaded, submitPrompt]);
 
   if (isLoading) {
     return (

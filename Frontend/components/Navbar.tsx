@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { SuphalaAILauncher } from "./SuphalaAILauncher";
 
 const AI_HISTORY_TOGGLE_EVENT = "ssgrow-ai-history-toggle";
 
@@ -128,9 +129,10 @@ export function Navbar() {
   }
 
   return (
-    <nav className="py-2 sticky top-0 z-50 glass-effect dark:bg-black dark:backdrop-blur">
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <>
+      <nav className="py-2 sticky top-0 z-50 glass-effect dark:bg-black dark:backdrop-blur">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/">
             <img
@@ -164,47 +166,10 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* Desktop AI Buttons - Hidden on mobile */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/ai-grow">
-              <div className="border border-emerald-200 dark:border-emerald-700 rounded-full p-2 flex justify-between items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors duration-200 cursor-pointer">
-                <span>
-                  <img className="w-8" src="/ai-logo.png" alt="ai-grow" />
-                </span>
-                <button className="text-emerald-700 dark:text-emerald-400 font-medium hover:text-emerald-900 dark:hover:text-emerald-300 transition-colors duration-200 whitespace-nowrap">
-                  Disease AI
-                </button>
-              </div>
-            </Link>
-
-            <Link href="/suggestion-ai">
-              <div className="border border-sky-200 dark:border-sky-700 rounded-full p-2 flex justify-between items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors duration-200 cursor-pointer">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-                  <svg
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M7 20h10M6 4h12a1 1 0 0 1 1 1v10.5a1 1 0 0 1-.4.8l-4.8 3.6a1 1 0 0 1-1.2 0l-4.8-3.6a1 1 0 0 1-.4-.8V5a1 1 0 0 1 1-1Z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 9h6M9 12h6"
-                    />
-                  </svg>
-                </span>
-                <button className="text-sky-700 dark:text-sky-400 font-medium hover:text-sky-900 dark:hover:text-sky-300 transition-colors duration-200 whitespace-nowrap">
-                  Suggestion AI
-                </button>
-              </div>
-            </Link>
-          </div>
+            {/* Desktop AI Entry - Hidden on mobile */}
+            <div className="hidden md:flex items-center gap-3">
+              <SuphalaAILauncher variant="nav" />
+            </div>
 
           {/* Desktop Right Menu - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-3">
@@ -290,9 +255,9 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 border-t border-gray-200 dark:border-gray-700">
             {/* Mobile Search */}
             <div className="relative group mt-4">
               <input
@@ -315,46 +280,8 @@ export function Navbar() {
               </svg>
             </div>
 
-            {/* Mobile AI Links */}
-            <Link href="/ai-grow" onClick={closeMobileMenu}>
-              <div className="mt-3 p-3 border border-emerald-200 dark:border-emerald-700 rounded-lg flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors">
-                <img className="w-6 h-6" src="/ai-logo.png" alt="ai-grow" />
-                <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                  Disease AI
-                </span>
-              </div>
-            </Link>
-
-            <Link href="/suggestion-ai" onClick={closeMobileMenu}>
-              <div className="mt-3 p-3 border border-sky-200 dark:border-sky-700 rounded-lg flex items-center gap-2 hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
-                  <svg
-                    className="h-3.5 w-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M7 20h10M6 4h12a1 1 0 0 1 1 1v10.5a1 1 0 0 1-.4.8l-4.8 3.6a1 1 0 0 1-1.2 0l-4.8-3.6a1 1 0 0 1-.4-.8V5a1 1 0 0 1 1-1Z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 9h6M9 12h6"
-                    />
-                  </svg>
-                </span>
-                <span className="text-sky-700 dark:text-sky-400 font-medium">
-                  Suggestion AI
-                </span>
-              </div>
-            </Link>
-
-            {/* Mobile Auth Links */}
-            <div className="mt-4 space-y-3">
+              {/* Mobile Auth Links */}
+              <div className="mt-4 space-y-3">
               {!isAuthenticated ? (
                 <>
                   <Link href="/login" onClick={closeMobileMenu}>
@@ -400,9 +327,11 @@ export function Navbar() {
                 </>
               )}
             </div>
-          </div>
-        )}
-      </div>
-    </nav>
+            </div>
+          )}
+        </div>
+      </nav>
+      <SuphalaAILauncher variant="floating" />
+    </>
   );
 }

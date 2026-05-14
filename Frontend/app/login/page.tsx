@@ -1,16 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import {
+  consumePostAuthRedirect,
+  getPostAuthRedirect,
+} from "@/lib/suphalaAI";
 
 export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [redirectTo, setRedirectTo] = useState("/dashboard");
+
+  useEffect(() => {
+    setRedirectTo(getPostAuthRedirect() || "/dashboard");
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +38,7 @@ export default function Login() {
         throw new Error("Login response missing token");
       }
       localStorage.setItem("token", token);
-      window.location.href = "/dashboard";
+      router.push(consumePostAuthRedirect() || "/dashboard");
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -184,7 +195,7 @@ export default function Login() {
           <div className="grid grid-cols-2 gap-3">
             <GoogleSignInButton
               onError={setError}
-              redirectTo="/dashboard"
+              redirectTo={redirectTo}
               text="signin_with"
             />
             <button className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">

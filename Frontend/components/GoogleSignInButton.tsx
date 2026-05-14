@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api";
+import { consumePostAuthRedirect } from "@/lib/suphalaAI";
 
 declare global {
   interface Window {
@@ -91,6 +93,7 @@ export default function GoogleSignInButton({
   redirectTo = "/dashboard",
   text = "continue_with",
 }: GoogleSignInButtonProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,7 +138,7 @@ export default function GoogleSignInButton({
               }
 
               localStorage.setItem("token", token);
-              window.location.href = redirectTo;
+              router.push(consumePostAuthRedirect() || redirectTo);
             } catch (error: any) {
               const message =
                 error?.response?.data?.message ||
@@ -170,7 +173,7 @@ export default function GoogleSignInButton({
     return () => {
       active = false;
     };
-  }, [onError, redirectTo, text]);
+  }, [onError, redirectTo, router, text]);
 
   return (
     <div className="w-full">

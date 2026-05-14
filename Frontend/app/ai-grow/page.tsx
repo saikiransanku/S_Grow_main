@@ -8,6 +8,7 @@ import {
   buildProfileName,
   fetchCurrentUserProfile,
 } from "@/lib/currentUser";
+import { consumePendingSuphalaIntent } from "@/lib/suphalaAI";
 import { useAuth } from "@/lib/useAuth";
 
 const AI_HISTORY_TOGGLE_EVENT = "ssgrow-ai-history-toggle";
@@ -851,7 +852,7 @@ function EmptyChatState() {
         <h1 className="mt-5 text-3xl font-medium tracking-[-0.04em] text-neutral-900 dark:text-neutral-100 md:text-5xl">
           How can{" "}
           <span className="bg-gradient-to-r from-emerald-200 via-white to-emerald-300 bg-clip-text text-transparent dark:from-emerald-300 dark:via-white dark:to-emerald-200">
-            SupalaAI
+            Suphala AI
           </span>{" "}
           help you today?
         </h1>
@@ -1109,6 +1110,7 @@ export default function AIGrow() {
   const dragDepthRef = useRef(0);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+  const pendingLauncherIntentHandledRef = useRef(false);
 
   const currentChat =
     chats.find((chat) => chat.id === currentChatId) ?? null;
@@ -1775,19 +1777,10 @@ export default function AIGrow() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (isAnalyzing) return;
+  const sendTextMessage = async (prompt: string) => {
+    if (!prompt) return;
 
-    const prompt = input.trim();
     const isGreetingPrompt = isGreetingMessage(prompt);
-    const hasImages = selectedImages.length > 0;
-    if (!prompt && !hasImages) return;
-
-    if (hasImages) {
-      await analyzeImageBatch(selectedImages, prompt);
-      return;
-    }
-
     const chatId = ensureActiveChat(prompt);
     const startedAt = performance.now();
 
@@ -1858,6 +1851,79 @@ export default function AIGrow() {
       );
     }
   };
+
+  const handleSendMessage = async (
+    promptOverride?: string,
+    queuedImagesOverride?: QueuedImage[],
+  ) => {
+    if (isAnalyzing) return;
+
+    const prompt = (promptOverride ?? input).trim();
+    const queuedImages = queuedImagesOverride ?? selectedImages;
+    const hasImages = queuedImages.length > 0;
+    if (!prompt && !hasImages) return;
+
+    if (hasImages) {
+      await analyzeImageBatch(queuedImages, prompt);
+      return;
+    }
+
+    await sendTextMessage(prompt);
+  };
+
+  useEffect(() => {
+    if (pendingLauncherIntentHandledRef.current) return;
+    if (isLoading || !isAuthenticated || isAnalyzing) return;
+
+    pendingLauncherIntentHandledRef.current = true;
+    const pendingIntent = consumePendingSuphalaIntent("disease");
+    if (!pendingIntent) return;
+
+    const launchPendingIntent = async () => {
+      const cleanPrompt = normalizeWhitespace(pendingIntent.prompt || "");
+
+      if (pendingIntent.images.length > 0) {
+        try {
+          const queuedImages = await Promise.all(
+            pendingIntent.images.map(async (file) => ({
+              id: createRequestId(),
+              file,
+              preview: await readFileAsDataUrl(file),
+              sourceType: "upload" as QueuedImageSource,
+            })),
+          );
+
+          await handleSendMessage(cleanPrompt, queuedImages);
+        } catch {
+          const chatId = ensureActiveChat("Leaf Analysis");
+          addAiMessage(chatId, {
+            id: createRequestId(),
+            type: "ai",
+            content:
+              "Unable to reopen the image selected from Suphala AI. Please upload the leaf image again.",
+          });
+        }
+        return;
+      }
+
+      if (pendingIntent.imageCount > 0) {
+        const chatId = ensureActiveChat("Leaf Analysis");
+        addAiMessage(chatId, {
+          id: createRequestId(),
+          type: "ai",
+          content:
+            "Your previous Suphala AI image selection expired before we could analyze it. Please upload the leaf image again.",
+        });
+        return;
+      }
+
+      if (cleanPrompt) {
+        await handleSendMessage(cleanPrompt);
+      }
+    };
+
+    void launchPendingIntent();
+  }, [isAuthenticated, isAnalyzing, isLoading, handleSendMessage]);
 
   if (isLoading) {
     return (
@@ -1988,14 +2054,14 @@ export default function AIGrow() {
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/[0.03] ring-1 ring-black/5 dark:bg-white/[0.04] dark:ring-white/10">
               <img
                 src="/ai-logo.png"
-                alt="SupalaAI logo"
+                alt="Suphala AI logo"
                 className="h-7 w-7 object-contain"
               />
             </span>
             {sidebarCompact ? null : (
               <div className="min-w-0 flex-1 text-left">
                 <span className="block truncate text-[17px] font-medium tracking-[-0.03em] text-neutral-900 dark:text-neutral-100">
-                  SupalaAI
+                  Suphala AI
                 </span>
               </div>
             )}
@@ -2380,7 +2446,7 @@ export default function AIGrow() {
 
                     <button
                       type="button"
-                      onClick={handleSendMessage}
+                      onClick={() => void handleSendMessage()}
                       disabled={
                         isAnalyzing || (!input.trim() && selectedImages.length === 0)
                       }

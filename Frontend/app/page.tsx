@@ -1,3 +1,5 @@
+import { SuphalaAILauncher } from "@/components/SuphalaAILauncher";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 dark:bg-black">
@@ -46,22 +48,15 @@ export default function Home() {
 
             {/* CTA Buttons */}
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-              <a
-                href="/ai-grow"
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-8 py-4 rounded-lg font-semibold shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all duration-300"
-              >
-                Open Disease AI
-              </a>
-              <a
-                href="/suggestion-ai"
-                className="bg-white/12 backdrop-blur-md border-2 border-sky-300/50 text-white px-8 py-4 rounded-lg font-semibold shadow-2xl hover:bg-sky-400/20 hover:scale-105 transition-all duration-300"
-              >
-                Open Suggestion AI
-              </a>
+            <div className="flex flex-col items-center gap-4 justify-center pt-6">
+              <SuphalaAILauncher variant="hero" />
               <button className="backdrop-blur-md bg-white/10 hover:bg-white/20 border-2 border-white/30 text-white px-8 py-4 rounded-lg font-semibold transition-all duration-300 hover:scale-105">
                 Watch Demo
               </button>
+              <p className="max-w-xl text-sm text-white/80">
+                Type crop-planning keywords for recommendations, or upload a leaf
+                image for disease prediction through one unified AI entry.
+              </p>
             </div>
 
             {/* Stats or Trust Indicators */}
